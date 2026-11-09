@@ -38,16 +38,53 @@ object PlayerApi {
         "unm"
     )
 
+    /**
+     * Ask the official endpoint for a url. The result may still be a trial clip
+     * for restricted songs, callers should check [firstPlayableUrl].
+     */
+    suspend fun officialSongUrl(
+        songId: String,
+        songLevel: SongLevel = SongLevel.STANDARD
+    ): Result<SongUrlResponse> {
+        val parsed = parseSongId(songId)
+        DebugLog.append(
+            "official song=${parsed.id} level=${songLevel.value} restricted=${parsed.shouldUseApiUnblock()}"
+        )
+        return apiGet<SongUrlResponse>(
+            "/song/url/v1",
+            mapOf("id" to parsed.id, "level" to songLevel.value)
+        )
+    }
+
+    /**
+     * Ask a third party matching service for one single source.
+     * [baseUrl] is the service root, `/match` is appended automatically.
+     */
+    suspend fun matchedSongUrl(
+        baseUrl: String,
+        songId: String,
+        source: String
+    ): Result<SongUrl> {
+        val realId = parseSongId(songId).id
+        val endpoint = "${baseUrl.trimEnd('/')}/match"
+        val data = requestMatchedUrl(endpoint, realId, source)
+            ?: return Result.failure(Exception("No unlocked url from $source"))
+        return Result.success(
+            SongUrl(id = realId.toLongOrNull() ?: 0L, url = data.url, br = data.br)
+        )
+    }
+
     suspend fun songPlayUrlV1(songId: String, songLevel: SongLevel = SongLevel.STANDARD): Result<SongUrlResponse> {
         val parsed = parseSongId(songId)
         val realId = parsed.id
         DebugLog.append("resolve song=$realId restricted=${parsed.shouldUseApiUnblock()}")
 
-        val officialResult = apiGet<SongUrlResponse>(
-            "/song/url/v1",
-            mapOf("id" to realId, "level" to songLevel.value)
-        )
-        return if (officialResult.hasPlayableUrl()) officialResult else tryUnblockUrl(realId)
+        val officialResult = officialSongUrl(songId, songLevel)
+        return if (officialResult.getOrNull()?.firstPlayableUrl() != null) {
+            officialResult
+        } else {
+            tryUnblockUrl(realId)
+        }
     }
 
     private data class ParsedSongId(
@@ -77,17 +114,6 @@ object PlayerApi {
         val fl = params["fl"]?.toIntOrNull()
         val st = params["st"]?.toIntOrNull()
         return ParsedSongId(id = id, fee = fee, pl = pl, dl = dl, fl = fl, st = st)
-    }
-
-    private fun Result<SongUrlResponse>.hasPlayableUrl(): Boolean =
-        getOrNull()?.data?.any { it.hasFullPlayableUrl() } == true
-
-    private fun SongUrl.hasFullPlayableUrl(): Boolean {
-        val playableUrl = url?.takeIf { it.isNotBlank() } ?: return false
-        if (isLikelyTrialUrl(playableUrl)) return false
-        if (freeTrialInfo != null && freeTrialInfo !is JsonNull) return false
-        if (time in 1..60_000) return false
-        return true
     }
 
     private suspend fun tryUnblockUrl(songId: String): Result<SongUrlResponse> =
@@ -160,7 +186,7 @@ object PlayerApi {
             // Prefer the validated matched URL. A top-level proxyUrl may point to a
             // trial/proxy stream and must not bypass the freeTrialInfo/time checks.
             val proxyUrl = jsonObj["proxyUrl"]?.jsonPrimitive?.contentOrNull
-                ?.takeIf { it.isNotBlank() && !isLikelyTrialUrl(it) }
+                ?.takeIf { it.isNotBlank() && !isTrialLink(it) }
             val playableUrl = data?.url ?: proxyUrl
             playableUrl?.let { UnblockData(it, data?.br ?: 320000) }
         } catch (e: Exception) {
@@ -176,14 +202,14 @@ object PlayerApi {
         dataObj?.let { return extractUrlFromObject(it) }
 
         dataPrimitive?.contentOrNull
-            ?.takeIf { it.isNotBlank() && !isLikelyTrialUrl(it) }
+            ?.takeIf { it.isNotBlank() && !isTrialLink(it) }
             ?.let { return UnblockData(it, 320000) }
 
         dataArray?.forEach { element ->
             when (element) {
                 is JsonObject -> extractUrlFromObject(element)?.let { return it }
                 is JsonPrimitive -> element.contentOrNull
-                    ?.takeIf { it.isNotBlank() && !isLikelyTrialUrl(it) }
+                    ?.takeIf { it.isNotBlank() && !isTrialLink(it) }
                     ?.let { return UnblockData(it, 320000) }
                 else -> Unit
             }
@@ -196,7 +222,7 @@ object PlayerApi {
         if (dataObj["freeTrialInfo"] != null && dataObj["freeTrialInfo"] !is JsonNull) return null
 
         val url = dataObj["url"]?.jsonPrimitive?.contentOrNull
-            ?.takeIf { it.isNotBlank() && !isLikelyTrialUrl(it) }
+            ?.takeIf { it.isNotBlank() && !isTrialLink(it) }
         val time = dataObj["time"]?.jsonPrimitive?.longOrNull
         val br = dataObj["br"]?.jsonPrimitive?.intOrNull
             ?: dataObj["bitrate"]?.jsonPrimitive?.intOrNull
@@ -206,8 +232,6 @@ object PlayerApi {
         return url?.let { UnblockData(it, br) }
     }
 
-    private fun isLikelyTrialUrl(url: String): Boolean =
-        url.contains("musicrep-ts", ignoreCase = true)
 
     suspend fun songLyric(musicId: Long): Result<LyricResponse> =
         apiGet("/lyric", mapOf("id" to musicId))

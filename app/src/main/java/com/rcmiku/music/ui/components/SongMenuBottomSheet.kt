@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -45,7 +46,11 @@ import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import com.rcmiku.music.LocalPlayerController
 import com.rcmiku.music.R
+import com.rcmiku.music.constants.audioQualityKey
 import com.rcmiku.music.constants.userIdKye
+import com.rcmiku.music.download.DownloadRepository
+import com.rcmiku.music.ui.icons.Down
+import com.rcmiku.music.utils.rememberEnumPreference
 import com.rcmiku.music.data.favoriteSongIdsDatastore
 import com.rcmiku.music.extensions.addToPlaylist
 import com.rcmiku.music.extensions.insertToPlaylist
@@ -65,6 +70,7 @@ import com.rcmiku.music.utils.rememberPreference
 import com.rcmiku.music.utils.reportLikeFailure
 import com.rcmiku.music.utils.toCoverImageUrl
 import com.rcmiku.ncmapi.api.account.AccountApi
+import com.rcmiku.ncmapi.api.player.SongLevel
 import com.rcmiku.ncmapi.model.Song
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -80,6 +86,9 @@ fun SongMenuBottomSheet(
     var openArtistBottomSheet by rememberSaveable { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var openSongListBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var showDownloadQuality by remember { mutableStateOf(false) }
+    val downloadQualityTarget = song
+    val audioQuality by rememberEnumPreference(audioQualityKey, SongLevel.STANDARD)
     val context = LocalContext.current
     val userId by rememberPreference(userIdKye, 0L)
     val mediaController = LocalPlayerController.current.controller
@@ -338,6 +347,33 @@ fun SongMenuBottomSheet(
 
                 item {
                     Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .clickable {
+                                    showDownloadQuality = true
+                                    onDismiss()
+                                }, verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Down,
+                                contentDescription = null,
+                                Modifier.padding(horizontal = 12.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.download),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Card(
                         shape = RoundedCornerShape(
                             topStart = 8.dp,
                             topEnd = 8.dp,
@@ -386,6 +422,19 @@ fun SongMenuBottomSheet(
                 }
             }
         }
+    }
+
+    if (showDownloadQuality) {
+        SongQualityDialog(
+            currentLevel = audioQuality,
+            onDismiss = { showDownloadQuality = false },
+            onQualitySelected = { level ->
+                downloadQualityTarget?.let { target ->
+                    DownloadRepository.enqueue(context, target, level)
+                }
+                showDownloadQuality = false
+            }
+        )
     }
 
     song?.let {

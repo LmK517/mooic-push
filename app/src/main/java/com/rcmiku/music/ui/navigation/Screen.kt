@@ -11,6 +11,8 @@ sealed class Screen(val route: String) {
     data object AlbumSublist : Screen("albumSublist")
     data object Login : Screen("login")
     data object Search : Screen("search")
+    data object MusicSource : Screen("musicSource")
+    data object Downloads : Screen("downloads")
 }
 
 @Serializable

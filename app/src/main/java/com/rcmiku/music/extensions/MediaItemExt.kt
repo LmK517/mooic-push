@@ -6,7 +6,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.rcmiku.music.constants.MediaSessionConstants
-import com.rcmiku.ncmapi.api.player.PlayerApi
+import com.rcmiku.music.source.SourceResolver
 import com.rcmiku.ncmapi.api.player.SongLevel
 import com.rcmiku.music.utils.CoverImageSize
 import com.rcmiku.music.utils.toCoverImageUrl
@@ -122,6 +122,5 @@ fun List<Radio>.toRadioMediaItemList() =
 
 suspend fun updateMediaItemUri(path: String, query: String?, songLevel: SongLevel): Uri? {
     val songId = if (query != null) "$path?$query" else path
-    return PlayerApi.songPlayUrlV1(songId, songLevel = songLevel)
-        .getOrNull()?.data?.firstOrNull()?.url?.toUri()
+    return SourceResolver.resolve(songId, songLevel)?.url?.toUri()
 }

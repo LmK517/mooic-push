@@ -12,7 +12,9 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import com.rcmiku.music.constants.ncmCookieKey
 import com.rcmiku.music.constants.unblockBaseUrlKey
+import com.rcmiku.music.download.DownloadRepository
 import com.rcmiku.music.playback.PlayerController
+import com.rcmiku.music.source.SourceRegistry
 import com.rcmiku.music.utils.SongListUtil
 import com.rcmiku.music.utils.UserAgentUtil
 import com.rcmiku.music.utils.dataStore
@@ -42,6 +44,8 @@ class JetMeloApp : Application(), SingletonImageLoader.Factory {
         PlayerController.init(this)
         FileProvider.init(cacheDir.resolve("ncm"))
         SongListUtil.init(filesDir.resolve("playlist"))
+        SourceRegistry.init(this, applicationScope)
+        DownloadRepository.init(this, applicationScope)
         UserAgentProvider.init(UserAgentUtil.DEFAULT_USER_AGENT)
         applicationScope.launch {
             UserAgentProvider.init(UserAgentUtil.DEFAULT_USER_AGENT)

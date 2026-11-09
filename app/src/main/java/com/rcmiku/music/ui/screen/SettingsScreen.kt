@@ -57,13 +57,11 @@ import com.rcmiku.music.constants.autoSkipNextOnErrorKey
 import com.rcmiku.music.constants.dynamicThemeColorKey
 import com.rcmiku.music.constants.ncmCookieKey
 import com.rcmiku.music.constants.themeSeedColorKey
-import com.rcmiku.music.constants.unblockBaseUrlKey
 import com.rcmiku.music.constants.use40DpIconKey
 import com.rcmiku.music.ui.components.Dialog
 import com.rcmiku.music.ui.components.CacheManagementDialog
 import com.rcmiku.music.ui.components.SongQualityDialog
 import com.rcmiku.music.ui.components.ThemeSeedDialog
-import com.rcmiku.music.ui.components.UrlEditDialog
 import com.rcmiku.music.ui.components.formatCacheSize
 import com.rcmiku.music.ui.icons.AudioLines
 import com.rcmiku.music.ui.icons.Dns
@@ -101,7 +99,6 @@ fun SettingsScreen(navController: NavHostController) {
     var themeSeed by rememberEnumPreference(themeSeedColorKey, defaultValue = AppThemeSeed.PURPLE)
     var autoSkipNextOnError by rememberPreference(autoSkipNextOnErrorKey, false)
     var ncmCookie by rememberPreference(ncmCookieKey, "")
-    var unblockBaseUrl by rememberPreference(unblockBaseUrlKey, "https://unm-server.focalors.ltd")
     var audioCacheMaxSize by rememberPreference(
         audioCacheMaxSizeKey,
         AudioCache.DEFAULT_MAX_SIZE_BYTES,
@@ -110,7 +107,6 @@ fun SettingsScreen(navController: NavHostController) {
 
     var showQualityDialog by remember { mutableStateOf(false) }
     var showThemeSeedDialog by remember { mutableStateOf(false) }
-    var showUnblockUrlDialog by remember { mutableStateOf(false) }
     var showCacheDialog by remember { mutableStateOf(false) }
     var logout by rememberSaveable { mutableStateOf(false) }
 
@@ -201,10 +197,16 @@ fun SettingsScreen(navController: NavHostController) {
             onClick = { autoSkipNextOnError = !autoSkipNextOnError }
         ),
         SettingItemData(
-            title = stringResource(R.string.unblock_server),
-            subtitle = unblockBaseUrl,
+            title = stringResource(R.string.music_source),
+            subtitle = stringResource(R.string.music_source_subtitle),
             imageVector = Dns,
-            onClick = { showUnblockUrlDialog = true }
+            onClick = { navController.navigate(Screen.MusicSource.route) }
+        ),
+        SettingItemData(
+            title = stringResource(R.string.download_management),
+            subtitle = stringResource(R.string.download_management_subtitle),
+            imageVector = AudioLines,
+            onClick = { navController.navigate(Screen.Downloads.route) }
         )
     )
 
@@ -371,15 +373,6 @@ fun SettingsScreen(navController: NavHostController) {
         )
     }
 
-    if (showUnblockUrlDialog) {
-        UrlEditDialog(
-            title = stringResource(R.string.unblock_server),
-            currentUrl = unblockBaseUrl,
-            defaultUrl = "https://unm-server.focalors.ltd",
-            onDismiss = { showUnblockUrlDialog = false },
-            onConfirm = { unblockBaseUrl = it }
-        )
-    }
 }
 
 @Composable

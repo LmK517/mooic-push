@@ -98,4 +98,22 @@
     <string name="cache_summary">音频缓存：已用 %1$s · 上限 %2$s</string>
     <string name="clear_cache">清除缓存</string>
     <string name="done">完成</string>
+    <string name="music_source">音源</string>
+    <string name="music_source_subtitle">音源配置与播放优先级</string>
+    <string name="installed_sources">已安装</string>
+    <string name="source_count">%1$d 个音源</string>
+    <string name="import_from_url">从 URL 导入</string>
+    <string name="priority_source">优先播放源</string>
+    <string name="source_running">运行中</string>
+    <string name="source_stopped">已停用</string>
+    <string name="route_count">%1$d/%2$d 个线路</string>
+    <string name="feature_help">功能说明</string>
+    <string name="feature_help_subtitle">音源配置与播放优先级说明</string>
+    <string name="test_all_routes">检测全部线路</string>
+    <string name="edit_address">修改地址</string>
+    <string name="delete_source">删除音源</string>
+    <string name="download">下载</string>
+    <string name="download_management">下载管理</string>
+    <string name="download_management_subtitle">查看下载进度与已完成的歌曲</string>
+    <string name="download_empty">还没有下载任务</string>
 </resources>
